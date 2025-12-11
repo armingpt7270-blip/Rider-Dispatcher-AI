@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      window.onerror = function (message, source, lineno, colno, error) {
+        if (message.includes('ResizeObserver loop')) return true;
+        
+        document.body.innerHTML = '<div style="color:red; padding:20px; font-size:20px; font-family:monospace; background:white; direction: ltr; text-align: left; z-index: 9999; position: fixed; top:0; left:0; width:100%; height:100%;">' +
+          '<h1>⚠️ Runtime Error</h1>' +
+          '<p><strong>Message:</strong> ' + message + '</p>' +
+          '<p><strong>Source:</strong> ' + source + ':' + lineno + '</p>' +
+          '</div>';
+        return true;
+      };
+    </script>
+    <title>سیستم هوشمند مدیریت ناوگان</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Vazirmatn', 'sans-serif'],
+            },
+            colors: {
+              primary: {
+                50: '#eff6ff',
+                100: '#dbeafe',
+                500: '#3b82f6',
+                600: '#2563eb',
+                700: '#1d4ed8',
+              }
+            },
+            animation: {
+              'blob': 'blob 7s infinite',
+              'gradient-x': 'gradient-x 15s ease infinite',
+            },
+            keyframes: {
+              blob: {
+                '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                '100%': { transform: 'translate(0px, 0px) scale(1)' },
+              },
+              'gradient-x': {
+                '0%, 100%': {
+                  'background-size': '200% 200%',
+                  'background-position': 'left center'
+                },
+                '50%': {
+                  'background-size': '200% 200%',
+                  'background-position': 'right center'
+                },
+              },
+            }
+          }
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    <style>
+      body {
+        font-family: 'Vazirmatn', sans-serif;
+        /* Lighter, happier gradient background */
+        background: linear-gradient(135deg, #f0fdfa 0%, #e0f2fe 50%, #f0f9ff 100%);
+        min-height: 100vh;
+      }
+      
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(59, 130, 246, 0.3);
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(59, 130, 246, 0.6);
+      }
+      
+      .leaflet-container {
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        border-radius: 1rem;
+      }
+
+      .custom-div-icon, .custom-pin-icon {
+        background: transparent;
+        border: none;
+      }
+      
+      .sidebar-transition {
+        transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      
+      .sidebar-text {
+        opacity: 0;
+        transform: translateX(10px);
+        transition: all 0.3s ease;
+        white-space: nowrap;
+      }
+      
+      .group:hover .sidebar-text {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      /* Lighter Glassmorphism */
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+      }
+      
+      .dark .glass-panel {
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+      }
+
+      .glass-card {
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .dark .glass-card {
+        background: rgba(30, 41, 59, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .glass-card:hover {
+        transform: translateY(-3px);
+        background: rgba(255, 255, 255, 0.85);
+        box-shadow: 0 15px 30px -5px rgba(59, 130, 246, 0.15);
+        border-color: #fff;
+      }
+      
+      .dark .glass-card:hover {
+        background: rgba(30, 41, 59, 0.8);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      }
+
+      /* Animated Background for decorative elements */
+      .animated-bg {
+        background: linear-gradient(-45deg, #6ee7b7, #3b82f6, #9333ea, #ec4899);
+        background-size: 400% 400%;
+        animation: gradient-x 15s ease infinite;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-leaflet": "https://esm.sh/react-leaflet@^5.0.0",
+    "leaflet": "https://esm.sh/leaflet@^1.9.4",
+    "leaflet/": "https://esm.sh/leaflet@^1.9.4/",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.1/",
+    "react": "https://esm.sh/react@^19.2.1",
+    "react/": "https://esm.sh/react@^19.2.1/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.559.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "vite": "https://esm.sh/vite@^7.2.7",
+    "express": "https://esm.sh/express@^5.2.1",
+    "@google/genai": "https://esm.sh/@google/genai@^1.32.0",
+    "cors": "https://esm.sh/cors@^2.8.5"
+  }
+}
+</script>
+</head>
+  <body class="text-slate-800 font-sans antialiased overflow-hidden transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100 selection:bg-blue-500 selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
