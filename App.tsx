@@ -290,9 +290,11 @@ function App() {
                         </div>
                         <h3 className="font-bold text-lg text-slate-800 dark:text-white">{t.activeRides}</h3>
                      </div>
-                     <button onClick={() => openModal('ADD_ORDER')} className="p-2 bg-indigo-600 rounded-xl text-white hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/30">
-                        <Plus className="w-5 h-5" />
-                     </button>
+                     {userRole === 'ADMIN' && (
+                       <button onClick={() => openModal('ADD_ORDER')} className="p-2 bg-indigo-600 rounded-xl text-white hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/30">
+                          <Plus className="w-5 h-5" />
+                       </button>
+                     )}
                   </div>
                   <div className="p-4 flex-1 overflow-y-auto custom-scrollbar">
                      <RideList 
@@ -339,9 +341,11 @@ function App() {
     <div className="glass-panel rounded-3xl overflow-hidden h-full flex flex-col animate-in fade-in duration-500">
       <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
         <h3 className="font-bold text-xl text-slate-800 dark:text-white">{t.drivers}</h3>
-        <button onClick={() => openModal('ADD_DRIVER')} className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50">
-          <Plus className="w-4 h-4" /> {t.add}
-        </button>
+        {userRole === 'ADMIN' && (
+          <button onClick={() => openModal('ADD_DRIVER')} className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50">
+            <Plus className="w-4 h-4" /> {t.add}
+          </button>
+        )}
       </div>
       <div className="p-6 overflow-y-auto custom-scrollbar">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -377,9 +381,11 @@ function App() {
     <div className="glass-panel rounded-3xl overflow-hidden h-full flex flex-col animate-in fade-in duration-500">
       <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
         <h3 className="font-bold text-xl text-slate-800 dark:text-white">{t.customers}</h3>
-        <button onClick={() => openModal('ADD_CUSTOMER')} className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30">
-          <Plus className="w-4 h-4" /> {t.add}
-        </button>
+        {userRole === 'ADMIN' && (
+          <button onClick={() => openModal('ADD_CUSTOMER')} className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30">
+            <Plus className="w-4 h-4" /> {t.add}
+          </button>
+        )}
       </div>
       <div className="p-0 overflow-y-auto custom-scrollbar flex-1">
         <table className="w-full text-sm text-right border-separate border-spacing-y-2 px-4" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -399,7 +405,9 @@ function App() {
                 <td className="px-6 py-4 text-slate-600 dark:text-slate-300 truncate max-w-xs">{c.address}</td>
                 <td className="px-6 py-4 rounded-l-2xl">
                    <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-all">
-                        <button onClick={() => openModal('ADD_ORDER', { customerId: c.id, dropoffAddress: c.address })} className="text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 p-2 rounded-xl transition-colors"><PlusCircle className="w-5 h-5" /></button>
+                        {userRole === 'ADMIN' && (
+                          <button onClick={() => openModal('ADD_ORDER', { customerId: c.id, dropoffAddress: c.address })} className="text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 p-2 rounded-xl transition-colors"><PlusCircle className="w-5 h-5" /></button>
+                        )}
                         <button onClick={() => handleDeleteCustomer(c.id)} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-2 rounded-xl transition-colors"><Trash2 className="w-5 h-5" /></button>
                    </div>
                 </td>
@@ -415,9 +423,11 @@ function App() {
     <div className="glass-panel rounded-3xl overflow-hidden h-full flex flex-col animate-in fade-in duration-500">
       <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
         <h3 className="font-bold text-xl text-slate-800 dark:text-white">{t.stores}</h3>
-        <button onClick={() => openModal('ADD_STORE')} className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30">
-          <Plus className="w-4 h-4" /> {t.add}
-        </button>
+        {userRole === 'ADMIN' && (
+          <button onClick={() => openModal('ADD_STORE')} className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30">
+            <Plus className="w-4 h-4" /> {t.add}
+          </button>
+        )}
       </div>
        <div className="p-6 overflow-y-auto custom-scrollbar">
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -438,9 +448,11 @@ function App() {
                     <p className="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2"><Users className="w-4 h-4 opacity-50" /> {s.phone}</p>
                     <p className="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2 line-clamp-1"><MapPin className="w-4 h-4 opacity-50" /> {s.address}</p>
                 </div>
-                <button onClick={() => openModal('ADD_ORDER', { storeId: s.id, pickupAddress: s.address })} className="w-full py-3 bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors">
-                    {t.manualOrder}
-                </button>
+                {userRole === 'ADMIN' && (
+                  <button onClick={() => openModal('ADD_ORDER', { storeId: s.id, pickupAddress: s.address })} className="w-full py-3 bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors">
+                      {t.manualOrder}
+                  </button>
+                )}
             </div>
             ))}
         </div>
@@ -452,9 +464,11 @@ function App() {
     <div className="glass-panel rounded-3xl overflow-hidden h-full flex flex-col animate-in fade-in duration-500">
        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
           <h3 className="font-bold text-xl text-slate-800 dark:text-white">{t.orders}</h3>
-          <button onClick={() => openModal('ADD_ORDER')} className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30">
-            <Plus className="w-4 h-4" /> {t.add}
-          </button>
+          {userRole === 'ADMIN' && (
+            <button onClick={() => openModal('ADD_ORDER')} className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30">
+              <Plus className="w-4 h-4" /> {t.add}
+            </button>
+          )}
        </div>
        <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
           <RideList 

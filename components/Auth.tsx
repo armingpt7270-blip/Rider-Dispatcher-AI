@@ -242,13 +242,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, lang }) => {
         {t.login}
       </button>
 
-      {/* Quick Login Buttons for Testing */}
-      <div className="grid grid-cols-3 gap-2 mt-4">
-         <button type="button" onClick={() => loginAsTest('ADMIN')} className="text-[10px] py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 font-bold hover:bg-slate-200">تست ادمین</button>
-         <button type="button" onClick={() => loginAsTest('STORE')} className="text-[10px] py-2 bg-purple-100 dark:bg-purple-900/30 rounded-xl text-purple-600 font-bold hover:bg-purple-200">تست فروشگاه</button>
-         <button type="button" onClick={() => loginAsTest('DRIVER')} className="text-[10px] py-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl text-amber-600 font-bold hover:bg-amber-200">تست سفیر</button>
-      </div>
-
       <div className="mt-8 text-center pt-6 border-t border-slate-200/50 dark:border-slate-700/50">
         <p className="text-xs font-bold text-slate-400 mb-2">{t.noAccount}</p>
         <button type="button" onClick={() => setView('REGISTER_SELECTION')} className="text-sm font-black text-blue-600 hover:text-blue-700 transition-colors">
