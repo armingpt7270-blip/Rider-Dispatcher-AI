@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Ride, RideStatus, Driver } from '../types';
 import { User, Clock, AlertCircle, ArrowRight, Banknote } from 'lucide-react';
@@ -10,9 +11,10 @@ interface RideListProps {
   onAssignDriver: (rideId: string, driverId: string) => void;
   onCancelRide: (rideId: string) => void;
   lang: 'fa' | 'en';
+  userRole?: 'ADMIN' | 'DRIVER' | 'STORE';
 }
 
-export const RideList: React.FC<RideListProps> = ({ rides, drivers, onAssignDriver, onCancelRide, lang }) => {
+export const RideList: React.FC<RideListProps> = ({ rides, drivers, onAssignDriver, onCancelRide, lang, userRole = 'ADMIN' }) => {
   const [loadingSuggestion, setLoadingSuggestion] = React.useState<string | null>(null);
   const t = translations[lang];
 
@@ -94,20 +96,27 @@ export const RideList: React.FC<RideListProps> = ({ rides, drivers, onAssignDriv
                 >
                   {t.cancel}
                 </button>
-                <button 
-                  onClick={() => handleSmartAssign(ride)}
-                  disabled={loadingSuggestion === ride.id}
-                  className="px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:scale-105 rounded-xl transition-all shadow-lg shadow-indigo-500/30 flex items-center disabled:opacity-70 disabled:scale-100"
-                >
-                  {loadingSuggestion === ride.id ? (
-                     <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  ) : (
-                    <>
-                    {lang === 'fa' ? t.assignSmart : t.assignSmart}
-                    <AlertCircle className={`w-3.5 h-3.5 ${lang === 'fa' ? 'mr-1.5' : 'ml-1.5'}`} />
-                    </>
-                  )}
-                </button>
+                {userRole === 'ADMIN' && (
+                  <button 
+                    onClick={() => handleSmartAssign(ride)}
+                    disabled={loadingSuggestion === ride.id}
+                    className="px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:scale-105 rounded-xl transition-all shadow-lg shadow-indigo-500/30 flex items-center disabled:opacity-70 disabled:scale-100"
+                  >
+                    {loadingSuggestion === ride.id ? (
+                       <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                      {t.assignSmart}
+                      <AlertCircle className={`w-3.5 h-3.5 ${lang === 'fa' ? 'mr-1.5' : 'ml-1.5'}`} />
+                      </>
+                    )}
+                  </button>
+                )}
+                {userRole === 'STORE' && (
+                    <span className="text-xs font-bold text-amber-500 bg-amber-100 dark:bg-amber-900/30 px-3 py-1 rounded-lg">
+                        {t.waitingForAdmin}
+                    </span>
+                )}
               </div>
             )}
              {ride.status !== RideStatus.PENDING && ride.driverId && (

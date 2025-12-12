@@ -1,3 +1,4 @@
+
 export const translations = {
   fa: {
     appTitle: 'سامانه هوشمند ناوگان',
@@ -61,7 +62,7 @@ export const translations = {
     createOrder: 'ثبت سفارش',
     locationRequired: 'لطفا موقعیت مکانی را روی نقشه مشخص کنید',
     status: {
-      PENDING: 'در انتظار',
+      PENDING: 'در انتظار تایید',
       ASSIGNED: 'تخصیص یافته',
       IN_PROGRESS: 'در حال انجام',
       COMPLETED: 'تکمیل شده',
@@ -86,7 +87,21 @@ export const translations = {
     price: 'مبلغ (تومان)',
     toggleStatus: 'تغییر وضعیت',
     passwordsNotMatch: 'رمز عبور و تکرار آن مطابقت ندارند',
-    fillAll: 'لطفا تمام فیلدها را پر کنید'
+    fillAll: 'لطفا تمام فیلدها را پر کنید',
+    wallet: 'کیف پول',
+    profile: 'پروفایل من',
+    settlementRequest: 'درخواست تسویه',
+    currentBalance: 'موجودری فعلی',
+    shebaNumber: 'شماره شبا',
+    cardNumber: 'شماره کارت',
+    requestSettlement: 'ثبت درخواست',
+    changePassword: 'تغییر رمز عبور',
+    newPassword: 'رمز عبور جدید',
+    updateProfile: 'بروزرسانی پروفایل',
+    storeSettings: 'تنظیمات فروشگاه',
+    waitingForAdmin: 'در انتظار تایید ادمین',
+    myCustomers: 'مشتریان من',
+    onlineDrivers: 'سفیران آنلاین'
   },
   en: {
     appTitle: 'Fleet Dispatch AI',
@@ -150,7 +165,7 @@ export const translations = {
     createOrder: 'Create Order',
     locationRequired: 'Please select a location on the map',
     status: {
-      PENDING: 'Pending',
+      PENDING: 'Pending Approval',
       ASSIGNED: 'Assigned',
       IN_PROGRESS: 'In Progress',
       COMPLETED: 'Completed',
@@ -175,6 +190,20 @@ export const translations = {
     price: 'Price',
     toggleStatus: 'Toggle Status',
     passwordsNotMatch: 'Passwords do not match',
-    fillAll: 'Please fill all fields'
+    fillAll: 'Please fill all fields',
+    wallet: 'Wallet',
+    profile: 'My Profile',
+    settlementRequest: 'Settlement Request',
+    currentBalance: 'Current Balance',
+    shebaNumber: 'IBAN/Sheba',
+    cardNumber: 'Card Number',
+    requestSettlement: 'Request Settlement',
+    changePassword: 'Change Password',
+    newPassword: 'New Password',
+    updateProfile: 'Update Profile',
+    storeSettings: 'Store Settings',
+    waitingForAdmin: 'Waiting for Admin',
+    myCustomers: 'My Customers',
+    onlineDrivers: 'Online Drivers'
   }
 };

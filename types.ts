@@ -1,3 +1,4 @@
+
 export enum RideStatus {
   PENDING = 'PENDING',
   ASSIGNED = 'ASSIGNED',
@@ -20,6 +21,7 @@ export interface Location {
 
 export interface Customer {
   id: string;
+  storeId?: string; // Linked to a specific store
   name: string;
   phone: string;
   address: string;
@@ -32,6 +34,9 @@ export interface Store {
   owner: string;
   phone: string;
   address: string;
+  balance?: number; // For Wallet
+  iban?: string;
+  cardNumber?: string;
 }
 
 export interface Ride {

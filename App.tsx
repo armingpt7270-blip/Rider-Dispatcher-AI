@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
@@ -24,7 +25,10 @@ import {
   ChevronRight, 
   DollarSign, 
   Activity, 
-  X
+  X,
+  Wallet,
+  UserCircle,
+  CreditCard
 } from 'lucide-react';
 
 import { Ride, Driver, RideStatus, DriverStatus, Customer, Store } from './types';
@@ -43,7 +47,8 @@ import { translations } from './utils/translations';
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<'ADMIN' | 'DRIVER' | 'STORE'>('ADMIN');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'drivers' | 'customers' | 'stores' | 'orders'>('dashboard');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null); // For store logic
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'drivers' | 'customers' | 'stores' | 'orders' | 'wallet' | 'profile'>('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [lang, setLang] = useState<'fa' | 'en'>('fa');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -77,6 +82,11 @@ function App() {
     if (savedAuth) {
         setIsAuthenticated(true);
         setUserRole(savedAuth.role as any);
+        // If it's a store login, try to find the store id or assign a mock one
+        if (savedAuth.role === 'STORE') {
+             // Logic to find store ID would go here. For now, if "test_store", we match or create logic.
+             // We will handle this in handleLogin
+        }
     }
   }, []);
 
@@ -101,11 +111,35 @@ function App() {
   const handleLogin = (role: 'ADMIN' | 'DRIVER' | 'STORE') => {
     setIsAuthenticated(true);
     setUserRole(role);
+    
+    if (role === 'STORE') {
+        // For demo: if store list is empty or "test_store" logs in, link to first store or create dummy
+        // Ideally the auth system returns the ID.
+        const existingStores = db.getStores();
+        if (existingStores.length > 0) {
+            setCurrentUserId(existingStores[0].id);
+        } else {
+            // Create a dummy store for the current user if none exist
+            const newStore: Store = {
+                id: 's_demo',
+                name: 'فروشگاه دمو',
+                owner: 'مدیر فروشگاه',
+                phone: '09120000000',
+                address: 'تهران، بازار',
+                balance: 1500000
+            };
+            setStores([newStore]);
+            setCurrentUserId('s_demo');
+        }
+    } else {
+        setCurrentUserId(null);
+    }
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
     setUserRole('ADMIN');
+    setCurrentUserId(null);
     db.clearCredentials();
   };
 
@@ -138,6 +172,7 @@ function App() {
     e.preventDefault();
     const newCustomer: Customer = {
       id: `c${Date.now()}`,
+      storeId: userRole === 'STORE' ? currentUserId! : undefined, // Link to store if store user
       name: formData.name,
       phone: formData.phone,
       address: formData.address,
@@ -158,7 +193,8 @@ function App() {
       name: formData.name,
       owner: formData.owner,
       phone: formData.phone,
-      address: formData.address
+      address: formData.address,
+      balance: 0
     };
     setStores([...stores, newStore]);
     closeModal();
@@ -169,6 +205,14 @@ function App() {
     setStores(stores.map(s => s.id === selectedItem.id ? { ...s, ...formData } : s));
     closeModal();
   };
+  
+  const handleUpdateProfile = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (userRole === 'STORE' && currentUserId) {
+          setStores(stores.map(s => s.id === currentUserId ? { ...s, ...formData } : s));
+          alert(lang === 'fa' ? 'اطلاعات با موفقیت بروزرسانی شد' : 'Profile updated successfully');
+      }
+  };
 
   const handleDeleteStore = (id: string) => {
     if (confirm(t.delete + '?')) setStores(stores.filter(s => s.id !== id));
@@ -177,7 +221,10 @@ function App() {
   const handleCreateOrder = (e: React.FormEvent) => {
     e.preventDefault();
     const customer = customers.find(c => c.id === formData.customerId);
-    const store = stores.find(s => s.id === formData.storeId);
+    
+    // If Store user, storeId is currentUserId. If Admin, it comes from form.
+    const storeIdToUse = userRole === 'STORE' ? currentUserId : formData.storeId;
+    const store = stores.find(s => s.id === storeIdToUse);
     
     const pickupCoords = mapCoords.pickup || { lat: 35.6892, lng: 51.3890 };
     const defaultDropoff = customer?.location || { lat: 35.7000, lng: 51.4000 };
@@ -187,10 +234,10 @@ function App() {
       id: `r${Date.now()}`,
       customerName: customer ? customer.name : (store ? store.name : t.unknown),
       customerId: formData.customerId,
-      storeId: formData.storeId,
+      storeId: storeIdToUse,
       pickup: { ...pickupCoords, address: formData.pickupAddress || (store?.address || 'Tehran') },
       dropoff: { ...dropoffCoords, address: formData.dropoffAddress || (customer?.address || 'Tehran') },
-      status: RideStatus.PENDING,
+      status: RideStatus.PENDING, // Always Pending
       price: Number(formData.price) || 50000,
       requestedAt: new Date(),
       priority: formData.priority || 'NORMAL',
@@ -198,12 +245,17 @@ function App() {
     };
     setRides([newRide, ...rides]);
     closeModal();
+    
+    if (userRole === 'STORE') {
+        alert(lang === 'fa' ? 'سفارش با موفقیت ثبت شد و به ادمین ارسال گردید.' : 'Order created and sent to admin.');
+    }
   };
 
   const handleAICreateRide = (rideData: Partial<Ride>) => {
     const newRide: Ride = {
       id: `r${Date.now()}`,
       customerName: rideData.customerName || t.unknown,
+      storeId: userRole === 'STORE' ? currentUserId! : undefined,
       pickup: rideData.pickup!,
       dropoff: rideData.dropoff!,
       status: RideStatus.PENDING,
@@ -236,13 +288,22 @@ function App() {
     setSelectedItem(item);
     setFormData(item || {});
     setMapCoords({ pickup: null, dropoff: null });
-    // Default to 'pickup' mode when opening order modal
     setMapPickerMode(type === 'ADD_ORDER' ? 'pickup' : null);
     
+    // Auto-set dropoff if customer selected
     if (type === 'ADD_ORDER' && item?.customerId) {
         const c = customers.find(cust => cust.id === item.customerId);
         if (c && c.location) setMapCoords(prev => ({ ...prev, dropoff: c.location! }));
     }
+    
+    // If Store user creating order, pre-fill Store address as Pickup
+    if (type === 'ADD_ORDER' && userRole === 'STORE' && currentUserId) {
+        const myStore = stores.find(s => s.id === currentUserId);
+        if (myStore) {
+            setFormData(prev => ({ ...prev, pickupAddress: myStore.address }));
+        }
+    }
+
     setIsModalOpen(true);
   };
 
@@ -255,7 +316,6 @@ function App() {
 
   const handleSetLocation = (type: 'pickup' | 'dropoff', lat: number, lng: number) => {
       setMapCoords(prev => ({ ...prev, [type]: { lat, lng } }));
-      // Automatically switch to dropoff after pickup is set
       if (type === 'pickup') {
           setMapPickerMode('dropoff');
       }
@@ -263,6 +323,7 @@ function App() {
 
   // --- Views ---
 
+  // ADMIN DASHBOARD
   const renderDashboard = () => (
     <div className="flex flex-col h-full space-y-6 overflow-hidden">
         {/* Stats Row */}
@@ -278,10 +339,10 @@ function App() {
              <AIChatInput onRideCreate={handleAICreateRide} lang={lang} />
         </div>
 
-        {/* Main Content Split: Rides List & Drivers List (No Map) */}
+        {/* Main Content Split */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-hidden min-h-0 animate-in fade-in duration-700 delay-200">
               
-              {/* Left Column: Active Rides */}
+              {/* Active Rides */}
               <div className="glass-panel rounded-3xl flex flex-col overflow-hidden border-0 shadow-xl">
                   <div className="p-5 border-b border-white/10 flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
                      <div className="flex items-center gap-3">
@@ -303,11 +364,12 @@ function App() {
                        onAssignDriver={handleAssignDriver}
                        onCancelRide={handleCancelRide}
                        lang={lang}
+                       userRole={userRole}
                      />
                   </div>
               </div>
 
-              {/* Right Column: Available Drivers (Replacing Map) */}
+              {/* Drivers */}
               <div className="glass-panel rounded-3xl flex flex-col overflow-hidden border-0 shadow-xl">
                   <div className="p-5 border-b border-white/10 flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
                      <div className="flex items-center gap-3">
@@ -325,99 +387,221 @@ function App() {
                         drivers={drivers.filter(d => d.status === DriverStatus.AVAILABLE)} 
                         lang={lang} 
                      />
-                     {drivers.filter(d => d.status === DriverStatus.AVAILABLE).length === 0 && (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-400 opacity-60">
-                            <Car className="w-12 h-12 mb-2 opacity-50" />
-                            <p className="text-sm font-bold">No available drivers</p>
-                        </div>
-                     )}
                   </div>
               </div>
         </div>
     </div>
   );
 
-  const renderDrivers = () => (
-    <div className="glass-panel rounded-3xl overflow-hidden h-full flex flex-col animate-in fade-in duration-500">
-      <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
-        <h3 className="font-bold text-xl text-slate-800 dark:text-white">{t.drivers}</h3>
-        {userRole === 'ADMIN' && (
-          <button onClick={() => openModal('ADD_DRIVER')} className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50">
-            <Plus className="w-4 h-4" /> {t.add}
-          </button>
-        )}
-      </div>
-      <div className="p-6 overflow-y-auto custom-scrollbar">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {drivers.map(d => (
-            <div key={d.id} className="glass-card p-5 rounded-3xl relative group">
-                <div className="flex items-center gap-4 mb-3">
-                    <div className="relative">
-                        <img src={d.avatarUrl} className="w-14 h-14 rounded-2xl object-cover shadow-md" />
-                        <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-800 ${d.status === 'AVAILABLE' ? 'bg-green-500' : d.status === 'BUSY' ? 'bg-amber-500' : 'bg-slate-400'}`}></span>
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-lg text-slate-800 dark:text-white">{d.name}</h4>
-                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{d.vehicleType} • ⭐ {d.rating}</p>
-                    </div>
-                </div>
-                <div className="flex justify-between items-end">
-                     <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${d.status === 'AVAILABLE' ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300' : d.status === 'BUSY' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>
-                        {t.status[d.status]}
-                    </span>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => handleToggleDriverStatus(d.id)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700"><Power className="w-4 h-4 text-slate-600 dark:text-slate-300" /></button>
-                        <button onClick={() => handleDeleteDriver(d.id)} className="p-2 bg-red-50 dark:bg-red-900/30 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50"><Trash2 className="w-4 h-4 text-red-500" /></button>
-                    </div>
-                </div>
+  // STORE DASHBOARD
+  const renderStoreDashboard = () => {
+    const myStore = stores.find(s => s.id === currentUserId);
+    const myRides = rides.filter(r => r.storeId === currentUserId);
+    
+    return (
+        <div className="flex flex-col h-full space-y-6 overflow-hidden">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-in slide-in-from-top-5 duration-500 shrink-0">
+                 <StatCard title={t.orders} value={myRides.length} icon={Package} color="bg-indigo-500" />
+                 <StatCard title={t.activeRides} value={myRides.filter(r => r.status === RideStatus.IN_PROGRESS).length} icon={Activity} color="bg-amber-500" />
+                 <StatCard title={t.revenue} value={`${myRides.filter(r => r.status === RideStatus.COMPLETED).reduce((acc,curr) => acc+curr.price, 0).toLocaleString()} T`} icon={DollarSign} color="bg-green-500" />
+                 <StatCard title={t.wallet} value={`${myStore?.balance?.toLocaleString() || 0} T`} icon={Wallet} color="bg-pink-500" />
             </div>
-            ))}
-        </div>
-      </div>
-    </div>
-  );
 
-  const renderCustomers = () => (
-    <div className="glass-panel rounded-3xl overflow-hidden h-full flex flex-col animate-in fade-in duration-500">
-      <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
-        <h3 className="font-bold text-xl text-slate-800 dark:text-white">{t.customers}</h3>
-        {userRole === 'ADMIN' && (
-          <button onClick={() => openModal('ADD_CUSTOMER')} className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30">
-            <Plus className="w-4 h-4" /> {t.add}
-          </button>
-        )}
-      </div>
-      <div className="p-0 overflow-y-auto custom-scrollbar flex-1">
-        <table className="w-full text-sm text-right border-separate border-spacing-y-2 px-4" dir={isRTL ? 'rtl' : 'ltr'}>
-          <thead className="text-slate-500 dark:text-slate-400">
-            <tr>
-              <th className="px-6 py-4 font-bold opacity-70">{t.name}</th>
-              <th className="px-6 py-4 font-bold opacity-70">{t.phone}</th>
-              <th className="px-6 py-4 font-bold opacity-70">{t.address}</th>
-              <th className="px-6 py-4 font-bold opacity-70 w-32">{t.action}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {customers.map(c => (
-              <tr key={c.id} className="glass-card rounded-2xl group">
-                <td className="px-6 py-4 font-bold text-slate-800 dark:text-white rounded-r-2xl">{c.name}</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-300 font-medium font-mono">{c.phone}</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-300 truncate max-w-xs">{c.address}</td>
-                <td className="px-6 py-4 rounded-l-2xl">
-                   <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-all">
-                        {userRole === 'ADMIN' && (
-                          <button onClick={() => openModal('ADD_ORDER', { customerId: c.id, dropoffAddress: c.address })} className="text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 p-2 rounded-xl transition-colors"><PlusCircle className="w-5 h-5" /></button>
-                        )}
-                        <button onClick={() => handleDeleteCustomer(c.id)} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-2 rounded-xl transition-colors"><Trash2 className="w-5 h-5" /></button>
-                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+            <div className="flex-1 glass-panel rounded-3xl flex flex-col overflow-hidden border-0 shadow-xl">
+                  <div className="p-5 border-b border-white/10 flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
+                     <div className="flex items-center gap-3">
+                        <div className="bg-indigo-500/10 p-2 rounded-xl text-indigo-600 dark:text-indigo-400">
+                           <Activity className="w-5 h-5" />
+                        </div>
+                        <h3 className="font-bold text-lg text-slate-800 dark:text-white">{t.activeRides}</h3>
+                     </div>
+                     <button onClick={() => openModal('ADD_ORDER')} className="p-2 bg-indigo-600 rounded-xl text-white hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/30">
+                        <Plus className="w-5 h-5" />
+                     </button>
+                  </div>
+                  <div className="p-4 flex-1 overflow-y-auto custom-scrollbar">
+                     <RideList 
+                       rides={myRides.filter(r => r.status !== RideStatus.COMPLETED && r.status !== RideStatus.CANCELLED)} 
+                       drivers={drivers}
+                       onAssignDriver={() => {}} // Store can't assign
+                       onCancelRide={handleCancelRide}
+                       lang={lang}
+                       userRole={userRole}
+                     />
+                  </div>
+            </div>
+        </div>
+    );
+  };
+
+  const renderWallet = () => {
+    const myStore = stores.find(s => s.id === currentUserId);
+    return (
+        <div className="glass-panel rounded-3xl p-8 max-w-2xl mx-auto mt-4 animate-in fade-in slide-in-from-bottom-5">
+            <h2 className="text-2xl font-black mb-6 text-slate-800 dark:text-white flex items-center gap-3">
+                <Wallet className="w-8 h-8 text-pink-500" /> {t.wallet}
+            </h2>
+            
+            <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-3xl p-8 mb-8 text-white shadow-2xl relative overflow-hidden">
+                <div className="absolute right-0 top-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
+                <p className="text-slate-400 font-bold mb-2">{t.currentBalance}</p>
+                <div className="text-4xl font-black tracking-tight">{myStore?.balance?.toLocaleString() || 0} <span className="text-lg font-normal opacity-70">Toman</span></div>
+            </div>
+
+            <form className="space-y-6">
+                <div>
+                    <label className={labelClass}>{t.cardNumber}</label>
+                    <div className="relative">
+                        <CreditCard className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 ${isRTL ? 'right-4' : 'left-4'}`} />
+                        <input type="text" placeholder="0000-0000-0000-0000" className={inputClass + (isRTL ? ' pr-12' : ' pl-12')} dir="ltr" defaultValue={myStore?.cardNumber} />
+                    </div>
+                </div>
+                <div>
+                    <label className={labelClass}>{t.shebaNumber}</label>
+                    <div className="relative">
+                        <span className={`absolute top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm ${isRTL ? 'right-4' : 'left-4'}`}>IR</span>
+                        <input type="text" placeholder="000000000000000000000000" className={inputClass + (isRTL ? ' pr-12' : ' pl-12')} dir="ltr" defaultValue={myStore?.iban} />
+                    </div>
+                </div>
+                <div className="pt-4">
+                    <button type="button" className="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-pink-500/30 transition-transform hover:scale-[1.02]">
+                        {t.requestSettlement}
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+  };
+
+  const renderProfile = () => {
+    const myStore = stores.find(s => s.id === currentUserId);
+    if (!myStore) return null;
+
+    return (
+        <div className="glass-panel rounded-3xl p-8 max-w-2xl mx-auto mt-4 animate-in fade-in slide-in-from-bottom-5">
+             <h2 className="text-2xl font-black mb-6 text-slate-800 dark:text-white flex items-center gap-3">
+                <Settings className="w-8 h-8 text-indigo-500" /> {t.storeSettings}
+            </h2>
+            <form onSubmit={handleUpdateProfile} className="space-y-6">
+                <div>
+                    <label className={labelClass}>{t.storeName}</label>
+                    <input type="text" value={formData.name ?? myStore.name} onChange={e => setFormData({...formData, name: e.target.value})} className={inputClass} />
+                </div>
+                <div>
+                    <label className={labelClass}>{t.owner}</label>
+                    <input type="text" value={formData.owner ?? myStore.owner} onChange={e => setFormData({...formData, owner: e.target.value})} className={inputClass} />
+                </div>
+                 <div>
+                    <label className={labelClass}>{t.phone}</label>
+                    <input type="text" value={formData.phone ?? myStore.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className={inputClass} dir="ltr" />
+                </div>
+                <div>
+                    <label className={labelClass}>{t.address}</label>
+                    <textarea value={formData.address ?? myStore.address} onChange={e => setFormData({...formData, address: e.target.value})} className={inputClass} rows={2} />
+                </div>
+                <div className="border-t border-slate-200 dark:border-slate-700 pt-6 mt-6">
+                    <h3 className="font-bold mb-4">{t.changePassword}</h3>
+                    <input type="password" placeholder={t.newPassword} className={inputClass} />
+                </div>
+                <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-500/30 transition-transform hover:scale-[1.02]">
+                    {t.save}
+                </button>
+            </form>
+        </div>
+    );
+  };
+
+  const renderDrivers = () => {
+      // If Store, filter to only show Available drivers and remove actions
+      const displayDrivers = userRole === 'STORE' ? drivers.filter(d => d.status === DriverStatus.AVAILABLE) : drivers;
+
+      return (
+        <div className="glass-panel rounded-3xl overflow-hidden h-full flex flex-col animate-in fade-in duration-500">
+        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
+            <h3 className="font-bold text-xl text-slate-800 dark:text-white">{userRole === 'STORE' ? t.onlineDrivers : t.drivers}</h3>
+            {userRole === 'ADMIN' && (
+            <button onClick={() => openModal('ADD_DRIVER')} className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50">
+                <Plus className="w-4 h-4" /> {t.add}
+            </button>
+            )}
+        </div>
+        <div className="p-6 overflow-y-auto custom-scrollbar">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {displayDrivers.map(d => (
+                <div key={d.id} className="glass-card p-5 rounded-3xl relative group">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="relative">
+                            <img src={d.avatarUrl} className="w-14 h-14 rounded-2xl object-cover shadow-md" />
+                            <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-800 ${d.status === 'AVAILABLE' ? 'bg-green-500' : d.status === 'BUSY' ? 'bg-amber-500' : 'bg-slate-400'}`}></span>
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-lg text-slate-800 dark:text-white">{d.name}</h4>
+                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{d.vehicleType} • ⭐ {d.rating}</p>
+                        </div>
+                    </div>
+                    {userRole === 'ADMIN' && (
+                    <div className="flex justify-between items-end">
+                        <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${d.status === 'AVAILABLE' ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300' : d.status === 'BUSY' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>
+                            {t.status[d.status]}
+                        </span>
+                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => handleToggleDriverStatus(d.id)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700"><Power className="w-4 h-4 text-slate-600 dark:text-slate-300" /></button>
+                            <button onClick={() => handleDeleteDriver(d.id)} className="p-2 bg-red-50 dark:bg-red-900/30 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50"><Trash2 className="w-4 h-4 text-red-500" /></button>
+                        </div>
+                    </div>
+                    )}
+                </div>
+                ))}
+            </div>
+        </div>
+        </div>
+      );
+  }
+
+  const renderCustomers = () => {
+    // Filter customers: Admin sees all, Store sees only theirs
+    const displayCustomers = userRole === 'STORE' ? customers.filter(c => c.storeId === currentUserId) : customers;
+
+    return (
+        <div className="glass-panel rounded-3xl overflow-hidden h-full flex flex-col animate-in fade-in duration-500">
+        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
+            <h3 className="font-bold text-xl text-slate-800 dark:text-white">{userRole === 'STORE' ? t.myCustomers : t.customers}</h3>
+            {/* Both Admin and Store can add customers, but Store adds only to their list */}
+            <button onClick={() => openModal('ADD_CUSTOMER')} className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30">
+                <Plus className="w-4 h-4" /> {t.add}
+            </button>
+        </div>
+        <div className="p-0 overflow-y-auto custom-scrollbar flex-1">
+            <table className="w-full text-sm text-right border-separate border-spacing-y-2 px-4" dir={isRTL ? 'rtl' : 'ltr'}>
+            <thead className="text-slate-500 dark:text-slate-400">
+                <tr>
+                <th className="px-6 py-4 font-bold opacity-70">{t.name}</th>
+                <th className="px-6 py-4 font-bold opacity-70">{t.phone}</th>
+                <th className="px-6 py-4 font-bold opacity-70">{t.address}</th>
+                <th className="px-6 py-4 font-bold opacity-70 w-32">{t.action}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {displayCustomers.map(c => (
+                <tr key={c.id} className="glass-card rounded-2xl group">
+                    <td className="px-6 py-4 font-bold text-slate-800 dark:text-white rounded-r-2xl">{c.name}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300 font-medium font-mono">{c.phone}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300 truncate max-w-xs">{c.address}</td>
+                    <td className="px-6 py-4 rounded-l-2xl">
+                    <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-all">
+                            {/* Store can add order for their customer */}
+                            <button onClick={() => openModal('ADD_ORDER', { customerId: c.id, dropoffAddress: c.address })} className="text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 p-2 rounded-xl transition-colors"><PlusCircle className="w-5 h-5" /></button>
+                            <button onClick={() => handleDeleteCustomer(c.id)} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-2 rounded-xl transition-colors"><Trash2 className="w-5 h-5" /></button>
+                    </div>
+                    </td>
+                </tr>
+                ))}
+            </tbody>
+            </table>
+        </div>
+        </div>
+    );
+  };
 
   const renderStores = () => (
     <div className="glass-panel rounded-3xl overflow-hidden h-full flex flex-col animate-in fade-in duration-500">
@@ -460,27 +644,32 @@ function App() {
     </div>
   );
 
-  const renderOrders = () => (
-    <div className="glass-panel rounded-3xl overflow-hidden h-full flex flex-col animate-in fade-in duration-500">
-       <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
-          <h3 className="font-bold text-xl text-slate-800 dark:text-white">{t.orders}</h3>
-          {userRole === 'ADMIN' && (
+  const renderOrders = () => {
+      // Filter rides for Store user
+      const displayRides = userRole === 'STORE' ? rides.filter(r => r.storeId === currentUserId) : rides;
+
+      return (
+        <div className="glass-panel rounded-3xl overflow-hidden h-full flex flex-col animate-in fade-in duration-500">
+        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
+            <h3 className="font-bold text-xl text-slate-800 dark:text-white">{t.orders}</h3>
+            {/* Store can create order */}
             <button onClick={() => openModal('ADD_ORDER')} className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30">
-              <Plus className="w-4 h-4" /> {t.add}
+                <Plus className="w-4 h-4" /> {t.add}
             </button>
-          )}
-       </div>
-       <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
-          <RideList 
-            rides={rides}
-            drivers={drivers}
-            onAssignDriver={handleAssignDriver}
-            onCancelRide={handleCancelRide}
-            lang={lang}
-          />
-       </div>
-    </div>
-  );
+        </div>
+        <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
+            <RideList 
+                rides={displayRides}
+                drivers={drivers}
+                onAssignDriver={handleAssignDriver}
+                onCancelRide={handleCancelRide}
+                lang={lang}
+                userRole={userRole}
+            />
+        </div>
+        </div>
+      );
+  };
 
   if (!isAuthenticated) {
     return (
@@ -501,7 +690,15 @@ function App() {
   const inputClass = "w-full py-3 bg-white/50 dark:bg-slate-800/50 border border-white/20 dark:border-white/10 rounded-2xl text-sm px-4 focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all dark:text-white backdrop-blur-sm";
   const labelClass = "block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 px-1";
 
-  const navItems = [
+  // Dynamic Navigation Items
+  const navItems = userRole === 'STORE' ? [
+    { id: 'dashboard', icon: LayoutDashboard, label: t.dashboard },
+    { id: 'orders', icon: Package, label: t.orders },
+    { id: 'customers', icon: Users, label: t.customers }, // My customers
+    { id: 'drivers', icon: Car, label: t.drivers }, // Read only
+    { id: 'wallet', icon: Wallet, label: t.wallet },
+    { id: 'profile', icon: UserCircle, label: t.profile } // Settings/Profile
+  ] : [
     { id: 'dashboard', icon: LayoutDashboard, label: t.dashboard },
     { id: 'orders', icon: Package, label: t.orders },
     { id: 'drivers', icon: Car, label: t.drivers },
@@ -516,7 +713,7 @@ function App() {
       <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-indigo-500/30 rounded-full blur-[100px] animate-blob mix-blend-multiply dark:mix-blend-overlay"></div>
       <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-pink-500/30 rounded-full blur-[100px] animate-blob animation-delay-2000 mix-blend-multiply dark:mix-blend-overlay"></div>
 
-      {/* Desktop Sidebar (Hover Expandable) */}
+      {/* Sidebar */}
       <aside className={`hidden md:flex flex-col h-[calc(100vh-2rem)] m-4 glass-panel rounded-[2rem] shadow-2xl z-20 sidebar-transition group overflow-hidden absolute ${isRTL ? 'right-0' : 'left-0'} w-20 hover:w-72`}>
         <div className="h-24 flex items-center justify-start px-6 shrink-0">
             <div className="bg-gradient-to-tr from-indigo-600 to-purple-600 p-2.5 rounded-2xl shadow-lg shadow-indigo-500/30 shrink-0">
@@ -583,7 +780,7 @@ function App() {
         </div>
       )}
 
-      {/* Main Content Area - Adjusted margin for fixed sidebar */}
+      {/* Main Content Area */}
       <main className={`flex-1 flex flex-col h-full relative z-10 overflow-hidden transition-all duration-300 ${isRTL ? 'md:mr-24' : 'md:ml-24'}`}>
          {/* Mobile Header */}
          <header className="h-20 flex items-center justify-between px-6 md:px-8 mt-4 md:mt-0">
@@ -593,9 +790,11 @@ function App() {
                  </button>
                  <div>
                     <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight drop-shadow-sm">
-                        {activeTab === 'dashboard' ? t.dashboard : activeTab === 'drivers' ? t.drivers : activeTab === 'customers' ? t.customers : activeTab === 'stores' ? t.stores : t.orders}
+                        {activeTab === 'dashboard' ? t.dashboard : activeTab === 'drivers' ? t.drivers : activeTab === 'customers' ? t.customers : activeTab === 'stores' ? t.stores : activeTab === 'wallet' ? t.wallet : activeTab === 'profile' ? t.profile : t.orders}
                     </h1>
-                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest opacity-70">Overview</p>
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest opacity-70">
+                        {userRole === 'STORE' ? (stores.find(s => s.id === currentUserId)?.name || 'Store Panel') : 'Admin Panel'}
+                    </p>
                  </div>
              </div>
 
@@ -608,18 +807,20 @@ function App() {
                     {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                  </button>
                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center font-black text-xs text-white shadow-lg shadow-pink-500/30">
-                     {userRole === 'ADMIN' ? 'AD' : 'US'}
+                     {userRole === 'ADMIN' ? 'AD' : userRole === 'STORE' ? 'ST' : 'US'}
                  </div>
              </div>
          </header>
 
          {/* Content View */}
          <div className="flex-1 p-4 md:p-6 md:pt-2 overflow-hidden">
-             {activeTab === 'dashboard' && renderDashboard()}
+             {activeTab === 'dashboard' && (userRole === 'STORE' ? renderStoreDashboard() : renderDashboard())}
              {activeTab === 'drivers' && renderDrivers()}
              {activeTab === 'customers' && renderCustomers()}
              {activeTab === 'stores' && renderStores()}
              {activeTab === 'orders' && renderOrders()}
+             {activeTab === 'wallet' && renderWallet()}
+             {activeTab === 'profile' && renderProfile()}
          </div>
       </main>
 
@@ -681,7 +882,8 @@ function App() {
 
          {modalType === 'ADD_ORDER' && (
             <form onSubmit={handleCreateOrder} className="space-y-4">
-               <div className="grid grid-cols-2 gap-4">
+               {/* Conditional Form: Admin selects customer/store. Store user selects customer only */}
+               <div className={`grid ${userRole === 'STORE' ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
                   <div>
                     <label className={labelClass}>{t.selectCustomer}</label>
                     <div className="relative">
@@ -689,19 +891,23 @@ function App() {
                         value={formData.customerId || ''} 
                         onChange={e => {
                             const c = customers.find(cust => cust.id === e.target.value);
-                            const update = { customerId: e.target.value, storeId: undefined };
+                            // If Store user, storeId is implicit
+                            const update = { customerId: e.target.value, storeId: userRole === 'STORE' ? undefined : undefined };
                             if(c && c.location) setMapCoords(prev => ({ ...prev, dropoff: c.location! }));
                             setFormData({...formData, ...update});
                         }} 
                         className={`${inputClass} appearance-none`} 
-                        disabled={!!formData.storeId}
+                        disabled={!!formData.storeId && userRole === 'ADMIN'}
                         >
                         <option value="">--</option>
-                        {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        {/* Store sees only their customers */}
+                        {(userRole === 'STORE' ? customers.filter(c => c.storeId === currentUserId) : customers).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                         <ChevronRight className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none ${isRTL ? 'left-4' : 'right-4'} rotate-90`} />
                     </div>
                   </div>
+                  
+                  {userRole === 'ADMIN' && (
                   <div>
                     <label className={labelClass}>{t.selectStore}</label>
                     <div className="relative">
@@ -712,6 +918,7 @@ function App() {
                         <ChevronRight className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none ${isRTL ? 'left-4' : 'right-4'} rotate-90`} />
                     </div>
                   </div>
+                  )}
                </div>
                
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
