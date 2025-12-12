@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
@@ -673,10 +672,13 @@ function App() {
 
   if (!isAuthenticated) {
     return (
-      <div className="bg-slate-900">
+      <div className="bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
           <div className="fixed inset-0 overflow-hidden pointer-events-none">
-             <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/30 rounded-full blur-[120px] animate-pulse"></div>
-             <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-pink-500/30 rounded-full blur-[120px] animate-pulse delay-1000"></div>
+             <div className="absolute inset-0 z-[-1] animated-bg opacity-30 dark:opacity-40"></div>
+             {/* Vibrant blobs for login screen */}
+             <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-cyan-400/30 dark:bg-cyan-600/20 rounded-full blur-[120px] animate-blob"></div>
+             <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-fuchsia-400/30 dark:bg-fuchsia-600/20 rounded-full blur-[120px] animate-blob animation-delay-2000"></div>
+             <div className="absolute top-[30%] left-[30%] w-[40%] h-[40%] bg-yellow-300/30 dark:bg-yellow-500/10 rounded-full blur-[100px] animate-pulse"></div>
           </div>
           <div className={`fixed top-6 z-50 flex gap-3 ${isRTL ? 'left-6' : 'right-6'}`}>
              <button onClick={() => setLang(prev => prev === 'fa' ? 'en' : 'fa')} className="glass-panel px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:scale-105 transition-transform text-xs font-bold">{lang === 'fa' ? 'EN' : 'FA'}</button>
@@ -707,11 +709,12 @@ function App() {
   ];
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden text-slate-900 dark:text-slate-100 font-sans relative">
+    <div className="flex h-screen w-screen overflow-hidden text-slate-800 dark:text-slate-100 font-sans relative">
       {/* Dynamic Background */}
-      <div className="absolute inset-0 z-[-1] animated-bg opacity-20 dark:opacity-30"></div>
-      <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-indigo-500/30 rounded-full blur-[100px] animate-blob mix-blend-multiply dark:mix-blend-overlay"></div>
-      <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-pink-500/30 rounded-full blur-[100px] animate-blob animation-delay-2000 mix-blend-multiply dark:mix-blend-overlay"></div>
+      <div className="absolute inset-0 z-[-1] animated-bg opacity-30 dark:opacity-20"></div>
+      <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-cyan-400/40 rounded-full blur-[100px] animate-blob mix-blend-multiply dark:mix-blend-overlay"></div>
+      <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-fuchsia-400/40 rounded-full blur-[100px] animate-blob animation-delay-2000 mix-blend-multiply dark:mix-blend-overlay"></div>
+      <div className="absolute top-[40%] left-[40%] w-[500px] h-[500px] bg-yellow-300/30 rounded-full blur-[120px] animate-float mix-blend-multiply dark:mix-blend-overlay"></div>
 
       {/* Sidebar */}
       <aside className={`hidden md:flex flex-col h-[calc(100vh-2rem)] m-4 glass-panel rounded-[2rem] shadow-2xl z-20 sidebar-transition group overflow-hidden absolute ${isRTL ? 'right-0' : 'left-0'} w-20 hover:w-72`}>

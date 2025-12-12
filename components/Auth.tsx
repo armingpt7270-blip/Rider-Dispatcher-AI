@@ -96,6 +96,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, lang }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
 
@@ -109,7 +110,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, lang }) => {
     if (creds) setUsername(creds.username || '');
   }, []);
 
-  const resetForm = () => { setRegData(initialRegData); setError(''); };
+  const resetForm = () => { setRegData(initialRegData); setError(''); setShowRegisterPassword(false); };
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,51 +160,14 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, lang }) => {
     if (!regData.name || !regData.mobile || !regData.emailOrUser || !regData.password || !regData.address) { setError(t.fillAll); return; }
     if (regData.password !== regData.confirmPassword) { setError(t.passwordsNotMatch); return; }
     if (!regData.location) { setError(t.locationRequired); return; }
-    
     if (isDriver) {
-        // Only validate fields that exist in the form
-        if (!regData.vehicleType) { 
-             setError(lang === 'fa' ? 'نوع وسیله نقلیه انتخاب نشده است' : 'Vehicle type missing'); 
-             return;
-        }
-
-        const newDriver: Driver = {
-            id: `d${Date.now()}`,
-            name: regData.name,
-            phone: regData.mobile,
-            vehicleType: regData.vehicleType,
-            status: DriverStatus.OFFLINE,
-            rating: 5.0,
-            avatarUrl: `https://ui-avatars.com/api/?name=${regData.name}&background=random`,
-            location: {
-                lat: regData.location.lat,
-                lng: regData.location.lng,
-                address: regData.address
-            },
-            currentRideId: undefined
-        };
-        const drivers = db.getDrivers();
-        db.saveDrivers([...drivers, newDriver]);
-
+        if (!regData.nationalId || !regData.vehicleType) { setError(lang === 'fa' ? 'اطلاعات ناقص است' : 'Missing info'); return; }
     } else {
         if (!regData.ownerName) { setError(lang === 'fa' ? 'نام صاحب فروشگاه الزامی است' : 'Owner Name required'); return; }
-        
-        const newStore: StoreType = {
-            id: `s${Date.now()}`,
-            name: regData.name,
-            owner: regData.ownerName,
-            phone: regData.mobile,
-            address: regData.address
-        };
-        const stores = db.getStores();
-        db.saveStores([...stores, newStore]);
     }
-
-    alert(lang === 'fa' ? 'اطلاعات با موفقیت ثبت شد. اکنون می‌توانید وارد شوید.' : 'Registration successful. You can now login.');
+    alert(lang === 'fa' ? 'اطلاعات با موفقیت ثبت شد.' : 'Registration successful.');
     setView('LOGIN');
-    setUsername(regData.emailOrUser);
-    setPassword('');
-    setRegData(initialRegData);
+    resetForm();
   };
 
   const isRTL = lang === 'fa';
@@ -241,6 +205,13 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, lang }) => {
       <button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-2xl font-black text-sm shadow-lg shadow-blue-500/30 hover:scale-[1.02] transition-all duration-300 mt-2 tracking-wide uppercase">
         {t.login}
       </button>
+
+      {/* Quick Login Buttons for Testing */}
+      <div className="grid grid-cols-3 gap-2 mt-4">
+         <button type="button" onClick={() => loginAsTest('ADMIN')} className="text-[10px] py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 font-bold hover:bg-slate-200">تست ادمین</button>
+         <button type="button" onClick={() => loginAsTest('STORE')} className="text-[10px] py-2 bg-purple-100 dark:bg-purple-900/30 rounded-xl text-purple-600 font-bold hover:bg-purple-200">تست فروشگاه</button>
+         <button type="button" onClick={() => loginAsTest('DRIVER')} className="text-[10px] py-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl text-amber-600 font-bold hover:bg-amber-200">تست سفیر</button>
+      </div>
 
       <div className="mt-8 text-center pt-6 border-t border-slate-200/50 dark:border-slate-700/50">
         <p className="text-xs font-bold text-slate-400 mb-2">{t.noAccount}</p>
@@ -308,8 +279,19 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, lang }) => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input type="password" placeholder={t.password} value={regData.password} onChange={e => setRegData({...regData, password: e.target.value})} className={inputClass} />
-            <input type="password" placeholder={t.confirmPassword} value={regData.confirmPassword} onChange={e => setRegData({...regData, confirmPassword: e.target.value})} className={inputClass} />
+            <InputWrapper>
+              <input type={showRegisterPassword ? "text" : "password"} placeholder={t.password} value={regData.password} onChange={e => setRegData({...regData, password: e.target.value})} className={inputClass} />
+              <button type="button" onClick={() => setShowRegisterPassword(!showRegisterPassword)} className={`absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors ${isRTL ? 'left-4' : 'right-4'}`}>
+                {showRegisterPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </InputWrapper>
+            
+            <InputWrapper>
+              <input type={showRegisterPassword ? "text" : "password"} placeholder={t.confirmPassword} value={regData.confirmPassword} onChange={e => setRegData({...regData, confirmPassword: e.target.value})} className={inputClass} />
+              <button type="button" onClick={() => setShowRegisterPassword(!showRegisterPassword)} className={`absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors ${isRTL ? 'left-4' : 'right-4'}`}>
+                {showRegisterPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </InputWrapper>
         </div>
 
         <textarea placeholder={t.exactAddress} rows={2} value={regData.address} onChange={e => setRegData({...regData, address: e.target.value})} className={inputClass} />
@@ -331,7 +313,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, lang }) => {
 
   return (
     <div className="flex items-center justify-center min-h-screen p-4 relative z-10">
-        <div className="w-full max-w-md glass-panel p-8 rounded-[2.5rem] relative shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar" dir={isRTL ? 'rtl' : 'ltr'}>
+        <div className="w-full max-w-md glass-panel p-8 rounded-[2.5rem] relative overflow-hidden shadow-2xl" dir={isRTL ? 'rtl' : 'ltr'}>
              {/* Decorative top bar */}
              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400"></div>
              
